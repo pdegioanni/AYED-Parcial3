@@ -147,7 +147,7 @@ int main(int argc, char** argv) {
 	d.m = generarVertices(vertices, d.m);
 	//cout<< endl<<"Ubicacion de las manchas significativas: "<<endl;
 	//d.m.print();
-	cout<<endl<<endl;
+	//cout<<endl<<endl;
 	cout<<endl<<"Vertices del grafo sin enlazar: "<<endl;
 	printVertices(vertices);
 	
@@ -213,7 +213,7 @@ Matriz filtrarMatriz(Matriz m, int tamanoFiltro){
         for(int j=C-1;j>=(tamanoFiltro-1);j--) {
         	for(int f = 0; f<tamanoFiltro; f++){ 
         		for(int c = 0; c<tamanoFiltro; c++){
-        			submatriz[f][c] = m.getBit((i+f), (j-c)) * 1;
+        			submatriz[f][c] = m.getBit((i+f), (j-c));
         			if(submatriz[f][c] == 1) cant++;
 				}
 			}
@@ -350,11 +350,9 @@ CAMINO encontrarCircuito(queue<Vertice*> vertices){
 	CAMINO aux;
 	int cantVertices = vertices.size();
 	double costo =0;
-	//resultado.camino = list<int>;
 	resultado.costo = costo;
 	
 	while(!vertices.empty()){
-		//cout<<"Cantidad total de vertices: "<<vertices.size()<<endl;
 		Vertice* v = vertices.front();
 		vertices.pop();
 		aux = busquedaEnAmplitud(v, cantVertices);
@@ -403,7 +401,6 @@ CAMINO busquedaEnAmplitud(Vertice* v, int cantVertices){
 		//printLista(camino);
 		nV = aux.front();
 		aux.pop();
-		//cout<<"ultimo en camino "<<ultimo<<" nv "<< nV<<endl;
 		while((aristas[nV-1][ultimo -1] == 0 || contiene(camino, nV)) ){ //Mientras no haya camino, desencola
 			if(aux.empty()) {
 				salir = true;
