@@ -177,7 +177,8 @@ int main(int argc, char** argv) {
 DATA cargarMatriz(){
 	DATA d;
 
-	ifstream f("img.txt");
+	//ifstream f("img.txt");
+	ifstream f("imgSinBarreras.txt");
 	string line;
 	
 	int i = 0;
@@ -392,7 +393,7 @@ CAMINO busquedaEnAmplitud(Vertice* v, int cantVertices){
 		}
 	}
 	
-	while(!(camino.size() == cantVertices) || !salir){ //Mientras no se cumpla el ciclo
+	while((camino.size() < cantVertices) || !salir){ //Mientras no se cumpla el ciclo
 		ultimo = camino.front();
 		nV = aux.front();
 		aux.pop();
@@ -407,9 +408,8 @@ CAMINO busquedaEnAmplitud(Vertice* v, int cantVertices){
 		}
 		
 		if(!salir){
-			camino.push_front(nV);
+			camino.push_back(nV);
 			costo = costo + aristas[nV-1][ultimo -1];
-		
 			for(int j = 0; j<MAXNODOS; j++){
 				if(aristas[nV-1][j] != 0){ //Si hay camino
 					aux.push(j+1); //encola vecinos
@@ -418,11 +418,13 @@ CAMINO busquedaEnAmplitud(Vertice* v, int cantVertices){
 		}
 		else break;
 	}
-	
-	if(aristas[nV-1][v -> getNumero()-1] != 0){ //Se cierra el ciclo
+		int primerV = v -> getNumero();
+		int ultimoV = camino.back();
 		
-		camino.push_front(v -> getNumero());
-		costo = costo + aristas[nV-1][v -> getNumero()-1];
+	if(aristas[primerV-1][ultimoV-1] != 0){ //Se cierra el ciclo
+		
+		camino.push_back(primerV);
+		costo = costo + aristas[primerV-1][ultimoV-1];
 		resultado.camino = camino;
 		resultado.costo = costo;
 	}
@@ -462,24 +464,18 @@ double calcularDistancia(Vertice* v1, Vertice* v2){
 }
 
 bool contiene(list<int> l, int n){
-	//bool esta = false;
 	list <int> :: iterator it; //Iterador para recorrer la lista
-	
 	for(it = l.begin(); it != l.end(); ++it){
 		if((*it) == n) return true;
 	}
-	
 	return false;
 }
 
 void printLista(list<int> l){
-	//bool esta = false;
 	list <int> :: iterator it; //Iterador para recorrer la lista
-	
 	for(it = l.begin(); it != l.end(); ++it){
 		cout<<(*it)<<" ";
 	}
-	
 	cout<<endl;
 }
 
