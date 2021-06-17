@@ -5,7 +5,6 @@
 #include <string.h>
 #include <bitset>
 #include <math.h>
-//#include <typeinfo>
 #include <list>
 #include <queue>
 #include <iterator>
@@ -13,27 +12,25 @@
 
 #define C 28
 #define F 12
-//#define FILTRO 3
 #define MAXNODOS 10
 
 using namespace std;
 
-
+//VARIABLE GLOBAL
+//Matriz de adyacencia del grafo
 double aristas[MAXNODOS][MAXNODOS];
 
 //CLASE MATRIZ DE BITSETS
+//Se usa para cargar los datos del archivo de entrada
 class Matriz { 
 	private:
 		bitset<C> M[F];
 	public:
-		//Matriz(){bitset<C> M[F];};
-		//Matriz(){bitset<c>M[f]};
     	void print();
-    	void setBit(int f, int c);
-    	void clearBit(int f, int c);
-    	bool getBit(int f, int c);
-    	void setRow(int f, bitset<C> r);
-    	void subMatriz(int finicio, int cinicio, int ffin, int cfin);
+    	void setBit(int f, int c){M[f].set(c);};
+    	void clearBit(int f, int c){M[f].reset(c);};
+    	bool getBit(int f, int c){return this->M[f][c];};
+    	void setRow(int f, bitset<C> r){M[f] = r;};
 };
 
 void Matriz::print(){
@@ -44,19 +41,8 @@ void Matriz::print(){
      }
      cout<<endl;
 }
-void Matriz::setBit(int f, int c){
-	M[f].set(c);
-}
-void Matriz::clearBit(int f, int c){
-	M[f].reset(c);
-}
-bool Matriz::getBit(int f, int c){
-	return this->M[f][c];
-}
-void Matriz::setRow(int f, bitset<C> r){
-	M[f] = r;
-}
 
+//ESTRUCTURAS
 typedef struct{
 	Matriz m;//Malezas
 	Matriz b; //Barreras
@@ -67,35 +53,42 @@ typedef struct{
 	int y; //Coordenada y
 } POS;
 
-
 typedef struct{
-	int nVertice;
+	int nVertice;//numero del vertice vecino
 	double dist; 
 } VECINO;
 
+typedef struct{
+	list<int> camino;
+	double costo; 
+} CAMINO;
 
+
+//CLASE VERTICE
+//Modela un vertice del grafo
 class Vertice { 
 	private:
 		int n;
 		POS p;
-		list<VECINO> vecinos; //Arreglo que almacenara nodos vecinos y las distancias ([n][dist])
+		list<VECINO> vecinos; //Para almacenar nodos vecinos (solo para mostrar por consola, podria eliminarse)
 	public:
+		//Constructor
 		Vertice(int n, int x, int y){
 			this -> n = n;
 			this -> p.x = x;
 			this -> p.y = y;
 		}
-		int getNumero(){return n;};
+		//Getters
 		list<VECINO> getVecinos(){return vecinos;};
+		int getNumero(){return n;};
 		POS getCoordenadas() {return p;};
+		//Metodos
 		void printVertice();
 		void printVecinos();
 		void addVecino(VECINO v);
-		
 };
 
 void Vertice :: printVertice(){
-
    cout <<"Vertice "<< this -> n<<endl
    		<<"\tCoordenadas: ("<<this -> p.x << ", "<< this -> p.y <<")"<<endl
    		<<"\tVertices alcanzables:"<<endl;
@@ -113,31 +106,25 @@ void Vertice :: printVecinos(){
 	}
 }
 
-//ESTRUCTURAS
 
+//DECLARACION DE FUNCIONES
 
-typedef struct{
-	list<int> camino;
-	double costo; 
-} CAMINO;
+//Flujo principal 
+DATA cargarMatriz();//Crea matrices de entrada a partir de archivo de texto
+Matriz filtrarMatriz(Matriz m, int tamanoFiltro); //Filtra manchas significativas de malezas
+Matriz generarVertices(list<Vertice*>* vertices, Matriz m); //Asigna coordenadas y crea los vertices por cada mancha significativa
+queue<Vertice*> enlazarVerticesAlcanzables(list<Vertice*>* vertices, Matriz b); //Asocia a cada vertice con todos sus vecinos (vertices alcanzables)
+CAMINO encontrarCircuito(queue<Vertice*> vertices); //Busca posibles caminos Hamiltonianos a partir de algoritmo BFS
 
+//Auxiliares
+CAMINO busquedaEnAmplitud(Vertice* v, int cantVertices);//Hace BFS a partir del vertice indicado
+double calcularDistancia(Vertice* v1, Vertice* v2); //Calcula distancia euclidiana entre dos vertices
+void printAristas();//Imprime matriz de adyacencia en consola
+void printVertices(list<Vertice*>* l);//Imprime la lista de vertices con sus respectivos vecinos
+void printLista(list<int> l);//Imprime una lista de enteros (camino)
+bool contiene(list<int> l, int n); //Devuelve true si el entero indicado est[a incluido en la lista
 
-//DECLARACION DE FUNCIONES 
-DATA cargarMatriz();
-Matriz filtrarMatriz(Matriz m, int tamanoFiltro);
-Matriz generarVertices(list<Vertice*>* vertices, Matriz m);
-void printVertices(list<Vertice*>* l);
-queue<Vertice*> enlazarVerticesAlcanzables(list<Vertice*>* vertices, Matriz b);
-void corroborarCamino();
-double calcularDistancia(Vertice* v1, Vertice* v2);
-CAMINO encontrarCircuito(queue<Vertice*> vertices);
-CAMINO busquedaEnAmplitud(Vertice* v, int cantVertices);
-void printAristas();
-void printLista(list<int> l);
-bool contiene(list<int> l, int n);
-
-
-//CLASE PRINCIPAL
+//MAIN
 int main(int argc, char** argv) {
 	
 	//1) Carga de datos desde el archivo
@@ -152,7 +139,6 @@ int main(int argc, char** argv) {
 	cout<< endl<<"Matriz de malezas filtrada: "<<endl;
 	d.m.print();
 	
-	
 	//3)Creacion de un vertice del grafo por cada mancha significativa. 
 	//Si la mancha es mayor al filtro aplicado, se la reduce al punto correspondiente a su esquina superior izquierda
 	//Se registran las coordenadas de cada vertice.
@@ -161,30 +147,33 @@ int main(int argc, char** argv) {
 	d.m = generarVertices(vertices, d.m);
 	cout<< endl<<"Ubicacion de las manchas significativas: "<<endl;
 	d.m.print();
-	cout<<endl;
+	cout<<endl<<endl;
 	cout<<endl<<"Vertices del grafo sin enlazar: "<<endl;
 	printVertices(vertices);
 	
 	//4)Enlazado de vertices: para cada uno se agregan los vertices alcanzables y su distancia
 	queue<Vertice*> verticesEnlazados;
-	cout<<endl<<"Vertices del grafo enlazados: "<<endl;
+	cout<<endl<<endl<<"Vertices del grafo enlazados: "<<endl;
 	verticesEnlazados = enlazarVerticesAlcanzables(vertices, d.b);
-	cout<<"Cantidad total de vertices: "<<verticesEnlazados.size()<<endl;
-	cout<<"Aristas: "<<endl;
+	cout<<endl<<"Cantidad total de vertices: "<<verticesEnlazados.size()<<endl;
+	cout<<endl<<"Aristas: "<<endl;
 	printAristas();
 	
 	//5) Explorar caminos hamiltonianos posibles y elegir el de menor costo 
 	CAMINO respuesta;
 	respuesta = encontrarCircuito(verticesEnlazados);
 	
-	//cout<< endl<<"Coordenadas manchas significativas: "<<endl;
-	//d.m.print();
-	
+	cout<< endl<<" -------------------------FIN----------------------- "<<endl;
+	cout<<"Camino recomendado: ";
+	printLista(respuesta.camino);
+	cout<<"Costo: "<< respuesta.costo<<endl;
 	
 	return 0;	
 }
 
-//CargarMatriz() -> genera las matrices de entrada correspondientes a las malezas y a las barreras
+//FUNCIONES DEL FLUJO PRINCIPAL--------------------------------------------------
+
+//Genera las matrices de entrada correspondientes a las malezas y a las barreras
 DATA cargarMatriz(){
 	DATA d;
 
@@ -199,18 +188,17 @@ DATA cargarMatriz(){
 				d.b.setBit(i,line.size()-c);//Se agrega a matriz de barreras
 				line[c] = '0';//Se elimina de matriz de malezas	
 			} 
-			
 		}
+		
 		bitset<C> fila(line);
 		d.m.setRow(i, fila);
 		//d.m.print();
    		i++;
 	}
-	
     f.close();
     return d;
 }
-
+//Filtra manchas significativas de malezas
 Matriz filtrarMatriz(Matriz m, int tamanoFiltro){
 	Matriz s; //Matriz de salida
 	bool submatriz[tamanoFiltro][tamanoFiltro];
@@ -222,7 +210,6 @@ Matriz filtrarMatriz(Matriz m, int tamanoFiltro){
         for(int j=C-1;j>=0;j--) {
         	
         	for(int f = 0; f<tamanoFiltro; f++){ 
-        		//cout<<endl;
         		for(int c = 0; c<tamanoFiltro; c++){
         			submatriz[f][c] = m.getBit((i+f), (j-c)) * 1;
         			if(submatriz[f][c] == 1) cant++;
@@ -232,15 +219,12 @@ Matriz filtrarMatriz(Matriz m, int tamanoFiltro){
 				s.setBit(i+1, j-1);	
 			}
 			cant = 0;
-			//cout<<endl<<endl;
 		}
-			
     }
-    
     return s;
-	
 }
 
+//Asigna coordenadas y crea los vertices por cada mancha significativa
 Matriz generarVertices(list<Vertice*>* vertices, Matriz m){
 	Matriz s = m;
 	int nVertice = 0;
@@ -265,29 +249,10 @@ Matriz generarVertices(list<Vertice*>* vertices, Matriz m){
 			}
 		}
 	}
-	
 	return s;
 }
 
-void printVertices(list <Vertice*>* l){
-	list <Vertice*> :: iterator it;
-    for(it = l -> begin(); it != l -> end(); ++it){
-        (*it) -> printVertice();
-    	cout << '\n';
-    }
-}
-
-void printAristas(){
-	for(int i= 0; i<MAXNODOS; i++){
-		cout<<endl;
-		for(int j = 0; j<MAXNODOS; j++){
-			cout<<aristas[i][j] << "\t";
-		}
-	}
-	cout<<endl;
-}
-
-
+//Asocia a cada vertice con todos sus vecinos (vertices alcanzables)
 queue<Vertice*> enlazarVerticesAlcanzables(list <Vertice*>* vertices, Matriz b){
 	queue<Vertice*> verticesEnlazados;
 	bool verticeEnlazable = true; //Se setea en false cuando hay una barrera de por medio
@@ -375,11 +340,14 @@ queue<Vertice*> enlazarVerticesAlcanzables(list <Vertice*>* vertices, Matriz b){
 	return verticesEnlazados;
 }
 
+//Busca posibles caminos Hamiltonianos a partir de algoritmo BFS
 CAMINO encontrarCircuito(queue<Vertice*> vertices){
 	CAMINO resultado;
 	CAMINO aux;
 	int cantVertices = vertices.size();
-	double costo;
+	double costo =0;
+	//resultado.camino = list<int>;
+	resultado.costo = costo;
 	
 	while(!vertices.empty()){
 		//cout<<"Cantidad total de vertices: "<<vertices.size()<<endl;
@@ -388,11 +356,12 @@ CAMINO encontrarCircuito(queue<Vertice*> vertices){
 		aux = busquedaEnAmplitud(v, cantVertices);
 		
 		if(aux.costo != 0){
-			cout<<"Camino encontrado: ";
+			cout<<"Posible camino encontrado: ";
 			printLista(aux.camino);
-			cout<<endl<<"Costo: "<<  aux.costo<<endl;
-		
-			if(aux.costo < resultado.costo)	resultado = aux;	
+			cout<<"Costo: "<<  aux.costo<<endl;
+	
+			if(resultado.costo == 0 ||aux.costo < resultado.costo)	resultado = aux;
+				
 		}
 	}
 	
@@ -400,21 +369,12 @@ CAMINO encontrarCircuito(queue<Vertice*> vertices){
 	
 }
 
-double calcularDistancia(Vertice* v1, Vertice* v2){
-	double resultado;
-	int x1 = v1 -> getCoordenadas().x;
-	int x2 = v2 -> getCoordenadas().x;
-	int y1 = v1 -> getCoordenadas().y;
-	int y2 = v2 -> getCoordenadas().y;
-	
-	resultado = sqrt((x2-x1) * (x2-x1) + (y2-y1) * (y2-y1));
-	
-	return resultado;
-}
-
+//FUNCIONES AUXILIARES--------------------------------------------------
 CAMINO busquedaEnAmplitud(Vertice* v, int cantVertices){
 	int nV = v -> getNumero();
+	cout<<endl<<"Buscando camino a partir de vertice "<< nV<<endl;
 	int ultimo;
+	bool salir = false;
 	
 	list<int> camino;
 	queue<int> aux;
@@ -426,57 +386,78 @@ CAMINO busquedaEnAmplitud(Vertice* v, int cantVertices){
 	
 	camino.push_front(nV);
 	
-	
-	//list <VECINO> :: iterator it; //Iterador para recorrer la lista
-	/*for(it = vecinos.begin(); it != vecinos.end(); ++it){
-		int n = (it) -> nVertice;
-		aux.push(n);
-		//cout<<"n "<< n<<endl;
-	}*/
-	
-	//aux.push(v);
 	for(int j = 0; j<MAXNODOS; j++){
 		if(aristas[nV-1][j] != 0){ //Si hay camino
 			aux.push(j+1);
 		}
 	}
 	
-	while(!(camino.size() == cantVertices)){ //Mientras no se cumpla el ciclo
+	while(!(camino.size() == cantVertices) || !salir){ //Mientras no se cumpla el ciclo
 		ultimo = camino.front();
 		nV = aux.front();
 		aux.pop();
-		
-		//cout<<"Camino ";
-		//printLista(camino);
-		
-		while(aristas[nV-1][ultimo -1] == 0 || contiene(camino, nV)){ //Mientras no haya camino, desencola
-			//cout<< aristas[nV-1][ultimo -1]<<endl;
-			aux.pop();
+			
+		while((aristas[nV-1][ultimo -1] == 0 || contiene(camino, nV)) ){ //Mientras no haya camino, desencola
+			if(aux.empty()) {
+				salir = true;
+				break;	
+			}
 			nV = aux.front();
+			aux.pop();
 		}
 		
-		camino.push_front(nV);
-		costo = costo + aristas[nV-1][ultimo -1];
+		if(!salir){
+			camino.push_front(nV);
+			costo = costo + aristas[nV-1][ultimo -1];
 		
-		for(int j = 0; j<MAXNODOS; j++){
-			if(aristas[nV-1][j] != 0){ //Si hay camino
-				aux.push(j+1); //encola vecinos
+			for(int j = 0; j<MAXNODOS; j++){
+				if(aristas[nV-1][j] != 0){ //Si hay camino
+					aux.push(j+1); //encola vecinos
+				}
 			}
 		}
+		else break;
 	}
 	
 	if(aristas[nV-1][v -> getNumero()-1] != 0){ //Se cierra el ciclo
 		
 		camino.push_front(v -> getNumero());
 		costo = costo + aristas[nV-1][v -> getNumero()-1];
-		cout<<"Costo en bea "<< costo<<endl;
-		cout<<" Camino encontrado en bea: ";
-		printLista(camino);
-		
 		resultado.camino = camino;
-	resultado.costo = costo;
+		resultado.costo = costo;
 	}
-		
+	else cout<<"Camino no encontrado"<<endl;		
+	return resultado;
+}
+
+
+void printVertices(list <Vertice*>* l){
+	list <Vertice*> :: iterator it;
+    for(it = l -> begin(); it != l -> end(); ++it){
+        (*it) -> printVertice();
+    	cout << '\n';
+    }
+}
+
+void printAristas(){
+	for(int i= 0; i<MAXNODOS; i++){
+		cout<<endl;
+		for(int j = 0; j<MAXNODOS; j++){
+			cout<<aristas[i][j] << "\t";
+		}
+	}
+	cout<<endl;
+}
+
+double calcularDistancia(Vertice* v1, Vertice* v2){
+	double resultado;
+	int x1 = v1 -> getCoordenadas().x;
+	int x2 = v2 -> getCoordenadas().x;
+	int y1 = v1 -> getCoordenadas().y;
+	int y2 = v2 -> getCoordenadas().y;
+	
+	resultado = sqrt((x2-x1) * (x2-x1) + (y2-y1) * (y2-y1));
+	
 	return resultado;
 }
 
