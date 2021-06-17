@@ -12,7 +12,7 @@
 
 #define C 28
 #define F 12
-#define MAXNODOS 20
+#define MAXNODOS 15
 
 using namespace std;
 
