@@ -136,8 +136,8 @@ int main(int argc, char** argv) {
 	
 	//2)Filtrado de manchas significativas. Si la mancha es mayor al tamano del filtro quedan 1s consecutivos
 	d.m = filtrarMatriz(d.m, 3);
-	cout<< endl<<"Matriz de malezas filtrada: "<<endl;
-	d.m.print();
+	//cout<< endl<<"Matriz de malezas filtrada: "<<endl;
+	//d.m.print();
 	
 	//3)Creacion de un vertice del grafo por cada mancha significativa. 
 	//Si la mancha es mayor al filtro aplicado, se la reduce al punto correspondiente a su esquina superior izquierda
@@ -145,8 +145,8 @@ int main(int argc, char** argv) {
 	list<Vertice*> v;
 	list<Vertice*>* vertices = &v;
 	d.m = generarVertices(vertices, d.m);
-	cout<< endl<<"Ubicacion de las manchas significativas: "<<endl;
-	d.m.print();
+	//cout<< endl<<"Ubicacion de las manchas significativas: "<<endl;
+	//d.m.print();
 	cout<<endl<<endl;
 	cout<<endl<<"Vertices del grafo sin enlazar: "<<endl;
 	printVertices(vertices);
@@ -197,6 +197,7 @@ DATA cargarMatriz(){
 		//d.m.print();
    		i++;
 	}
+	
     f.close();
     return d;
 }
@@ -208,9 +209,8 @@ Matriz filtrarMatriz(Matriz m, int tamanoFiltro){
 	int cant = 0;
 	
 	//Se aplica filtro cuadrado del tamano definido por parametro
-	for(int i=0;i<F;i++){
-        for(int j=C-1;j>=0;j--) {
-        	
+	for(int i=0;i<(F-tamanoFiltro);i++){
+        for(int j=C-1;j>=(tamanoFiltro-1);j--) {
         	for(int f = 0; f<tamanoFiltro; f++){ 
         		for(int c = 0; c<tamanoFiltro; c++){
         			submatriz[f][c] = m.getBit((i+f), (j-c)) * 1;
@@ -223,11 +223,13 @@ Matriz filtrarMatriz(Matriz m, int tamanoFiltro){
 			cant = 0;
 		}
     }
+    
     return s;
 }
 
 //Asigna coordenadas y crea los vertices por cada mancha significativa
 Matriz generarVertices(list<Vertice*>* vertices, Matriz m){
+	
 	Matriz s = m;
 	int nVertice = 0;
 	bool flag = false;
@@ -375,18 +377,19 @@ CAMINO encontrarCircuito(queue<Vertice*> vertices){
 CAMINO busquedaEnAmplitud(Vertice* v, int cantVertices){
 	int nV = v -> getNumero();
 	cout<<endl<<"Buscando camino a partir de vertice "<< nV<<endl;
-	int ultimo;
-	bool salir = false;
-	
 	list<int> camino;
 	queue<int> aux;
+	
+	camino.push_back(nV);
+	int ultimo = camino.back();
+	bool salir = false;
+	
 	double costo = 0;
 	
 	CAMINO resultado;
 	resultado.costo = costo;
 	resultado.camino = camino;
 	
-	camino.push_back(nV);
 	
 	for(int j = 0; j<MAXNODOS; j++){
 		if(aristas[nV-1][j] != 0){ //Si hay camino
@@ -395,7 +398,9 @@ CAMINO busquedaEnAmplitud(Vertice* v, int cantVertices){
 	}
 	
 	while((camino.size() <= cantVertices) || !salir){ //Mientras no se cumpla el ciclo
+		
 		ultimo = camino.back();
+		//printLista(camino);
 		nV = aux.front();
 		aux.pop();
 		//cout<<"ultimo en camino "<<ultimo<<" nv "<< nV<<endl;
