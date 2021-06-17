@@ -7,6 +7,7 @@
 #include <math.h>
 //#include <typeinfo>
 #include <list>
+#include <queue>
 #include <iterator>
 #include <fstream>
 
@@ -55,7 +56,6 @@ void Matriz::setRow(int f, bitset<C> r){
 	M[f] = r;
 }
 
-//ESTRUCTURAS
 typedef struct{
 	Matriz m;//Malezas
 	Matriz b; //Barreras
@@ -66,9 +66,10 @@ typedef struct{
 	int y; //Coordenada y
 } POS;
 
+
 typedef struct{
-	int nVertice;//Coordenada x
-	double dist; //Coordenada y
+	int nVertice;
+	double dist; 
 } VECINO;
 
 
@@ -84,7 +85,7 @@ class Vertice {
 			this -> p.y = y;
 		}
 		int getNumero(){return n;};
-		//list<VECINO>* getVecinos(){return vecinos;};
+		list<VECINO> getVecinos(){return vecinos;};
 		POS getCoordenadas() {return p;};
 		void printVertice();
 		void printVecinos();
@@ -111,22 +112,25 @@ void Vertice :: printVecinos(){
 	}
 }
 
-/*typedef struct{
-	int n; //Numero de vertice
-	POS p; //Coordenadas
-	list<int[2]>* vecinos; //Arreglo que almacenara nodos vecinos y las distancias ([n][dist])
-} VERTICE;*/
+//ESTRUCTURAS
+
+
+typedef struct{
+	queue<int> camino;
+	double costo; 
+} CAMINO;
+
 
 //DECLARACION DE FUNCIONES 
 DATA cargarMatriz();
 Matriz filtrarMatriz(Matriz m, int tamanoFiltro);
 Matriz generarVertices(list<Vertice*>* vertices, Matriz m);
 void printVertices(list<Vertice*>* l);
-void enlazarVerticesAlcanzables(list<Vertice*>* vertices, Matriz b);
+queue<Vertice*> enlazarVerticesAlcanzables(list<Vertice*>* vertices, Matriz b);
 void corroborarCamino();
 double calcularDistancia(Vertice* v1, Vertice* v2);
-void definirCircuito();
-
+CAMINO encontrarCircuito(queue<Vertice*> vertices);
+CAMINO busquedaEnAmplitud(Vertice* v, int cantVertices);
 
 
 //CLASE PRINCIPAL
@@ -158,8 +162,14 @@ int main(int argc, char** argv) {
 	printVertices(vertices);
 	
 	//4)Enlazado de vertices: para cada uno se agregan los vertices alcanzables y su distancia
+	queue<Vertice*> verticesEnlazados;
 	cout<<endl<<"Vertices del grafo enlazados: "<<endl;
-	enlazarVerticesAlcanzables(vertices, d.b);
+	verticesEnlazados = enlazarVerticesAlcanzables(vertices, d.b);
+	cout<<"Cantidad total de vertices: "<<verticesEnlazados.size()<<endl;
+	
+	//5) Explorar caminos hamiltonianos posibles y elegir el de menor costo 
+	CAMINO respuesta;
+	respuesta = encontrarCircuito(verticesEnlazados);
 	
 	//cout<< endl<<"Coordenadas manchas significativas: "<<endl;
 	//d.m.print();
@@ -261,89 +271,107 @@ void printVertices(list <Vertice*>* l){
     }
 }
 
-void enlazarVerticesAlcanzables(list <Vertice*>* vertices, Matriz b){
-	POS coord;
-	POS coordVecino;
+queue<Vertice*> enlazarVerticesAlcanzables(list <Vertice*>* vertices, Matriz b){
+	queue<Vertice*> verticesEnlazados;
+	bool verticeEnlazable = true; //Se setea en false cuando hay una barrera de por medio
+	VECINO nuevoVecino; //Vecino a evaluar
+
+	Vertice* v1 = vertices -> front(); //Primer vertice en la lista
+	vertices -> pop_front();
+	Vertice* v2; //Vecino a evaluar
+
+	POS coord; //Coordenadas de v1
+	POS coordVecino; //Coordenadas de v2
 	
-	POS inicio;
+	POS inicio; //Coordenadas de inicio y final en la matriz de barreras
 	POS final;
 	
-	VECINO nuevoVecino;
+	double distancia; //Distancia euclideana entre v1 y v2
 	
-	bool nodoEnlazable = true;
-	double distancia;
+	list <Vertice*> :: iterator it; //Iterador para recorrer la lista
 	
-	Vertice* v1 = vertices -> front();
-	vertices -> pop_front();
-	//cout<<"Vertice "<< v1 -> getNumero()<<endl;
-	
-	Vertice* v2;
-	
-	
-	list <Vertice*> :: iterator it;
 	while(!vertices -> empty()){
-	
 	    for(it = vertices -> begin(); it != vertices -> end(); ++it){
-				v2 = (*it);
-				coord = v1 -> getCoordenadas();
-				coordVecino = v2 -> getCoordenadas();
-				inicio = coord;
-				final = coordVecino;
-				
-				if(coord.x > coordVecino.x){
-					inicio.x = coordVecino.x;
-					final.x = coord.x;	
-				} 
-				if(coord.y > coordVecino.y){
-					inicio.y = coordVecino.y;
-					final.y = coord.y;	
-				} 
-				
-				
-				for(int i = inicio.x -1; i<= final.x-1; i++){
-					//cout<<endl;
-					//if(v1 -> getNumero() == 5 && v2 -> getNumero() ==6) cout<<"i "<<i <<endl;
-					for(int j = final.y-1; j>=inicio.y-1; j--){
-					//	if(v1 -> getNumero() == 5 && v2 -> getNumero() ==6) cout<<"i "<<i <<" j "<<j<<endl;
-						if(b.getBit(i, C-j) == 1) {
-							nodoEnlazable = false;
-							break;
-						}
-						
+			v2 = (*it); //Se evalua siguiente vecino en la lista
+			
+			coord = v1 -> getCoordenadas();
+			coordVecino = v2 -> getCoordenadas();
+			
+			//Se va a evaluar una submatriz de la matriz de barreras, 
+			//Comprende todos los elementos entre ambos vertices
+			//Si en algun lugar hay una barrera (1 en la matriz de barrera), los vertices no son alcanzables,
+			//Se toman las coordenadas xy de menor valor como inicio y las de mayor valor como final de la submatriz
+			inicio = coord;
+			final = coordVecino;
+			if(coord.x > coordVecino.x){
+				inicio.x = coordVecino.x;
+				final.x = coord.x;	
+			} 
+			if(coord.y > coordVecino.y){
+				inicio.y = coordVecino.y;
+				final.y = coord.y;	
+			} 
+			
+			for(int i = inicio.x -1; i<= final.x-1; i++){
+				for(int j = final.y-1; j>=inicio.y-1; j--){
+					if(b.getBit(i, C-j) == 1) { //Encontro una barrera en el medio
+						verticeEnlazable = false; //Se descarta el vertice
+						break;
 					}
 				}
+			}
+			
+			if(verticeEnlazable){ //No hay barrera, se enlazan los nodos
+				VECINO nuevoVecino;
 				
-				if(nodoEnlazable){
-					//cout<< "Vertice " << v1 -> getNumero() << " es enlazable con vertice "<< v2 -> getNumero()<<endl;
-					
-					distancia = calcularDistancia(v1, v2);
-					//cout<<"Distancia: "<< distancia<<endl;
-					
-					VECINO nuevoVecino;
-					nuevoVecino.nVertice = v2 -> getNumero();
-					nuevoVecino.dist = distancia;
-					
-					//cout<<"Fffff "<<nuevoVecino.nVertice<<"     "<< nuevoVecino.dist<<endl;
-					//list<VECINO>* f = 
-					v1 -> addVecino(nuevoVecino);
-					
-					
-					// f -> push_front(nuevoVecino);
-					//cout<<"ddddd"<<endl;
-					
-					nuevoVecino.nVertice = v1 -> getNumero();
-					//v2 -> getVecinos() -> push_front(nuevoVecino);
-					v2 -> addVecino(nuevoVecino);
-				}
+				//Calcula distancia euclediana entre ambos vertices
+				distancia = calcularDistancia(v1, v2);
+				nuevoVecino.dist = distancia;
 				
-				nodoEnlazable = true;
+				//Enlaza a v2 con v1
+				nuevoVecino.nVertice = v2 -> getNumero();
+				v1 -> addVecino(nuevoVecino);
+				
+				//Enlaza a v1 con v2
+				nuevoVecino.nVertice = v1 -> getNumero();
+				v2 -> addVecino(nuevoVecino);
+				
+//				verticesEnlazados.push(v1);
+				//verticesEnlazados.push(v2);
+			}
+			
+			verticeEnlazable = true; //Resetea booleano para evaluar proximo vertice
 	    }
-	    v1 -> printVertice();
-	    v1 = vertices -> front();
-		vertices -> pop_front();
-		//cout<<"Vertice "<< v1 -> getNumero()<<endl;
+	    
+	    v1 -> printVertice();//Imprime el vertice en consola
+	    verticesEnlazados.push(v1);
+	    
+	    v1 = vertices -> front(); //Toma el siguiente vertice de la lista y lo elimina
+		vertices -> pop_front(); 
 	}
-	v1 -> printVertice();
+	
+	v1 -> printVertice(); //Imprime el ultimo nodo
+	verticesEnlazados.push(v1);
+	return verticesEnlazados;
+}
+
+CAMINO encontrarCircuito(queue<Vertice*> vertices){
+	//cout<<"Cantidad total de vertices: "<<vertices.size()<<endl;
+	CAMINO resultado;
+	CAMINO aux;
+	int cantVertices = vertices.size();
+	double costo;
+	
+	while(!vertices.empty()){
+		Vertice* v = vertices.front();
+		vertices.pop();
+		aux = busquedaEnAmplitud(v, cantVertices);
+		
+		if(aux.costo < resultado.costo)	resultado = aux;
+	}
+	
+	return resultado;
+	
 }
 
 double calcularDistancia(Vertice* v1, Vertice* v2){
@@ -356,6 +384,41 @@ double calcularDistancia(Vertice* v1, Vertice* v2){
 	resultado = sqrt((x2-x1) * (x2-x1) + (y2-y1) * (y2-y1));
 	
 	return resultado;
+}
+
+CAMINO busquedaEnAmplitud(Vertice* v, int cantVertices){
+	//queue<Vertice*> aux;
+	//queue<Vertice*> camino;
+	int nV = v -> getNumero();
+	queue<int> camino;
+	queue<int> aux;
+	double costo;
+	
+	CAMINO resultado;
+	resultado.camino = camino;
+	resultado.costo = costo;
+	
+	list<VECINO> vecinos = v -> getVecinos();
+	
+	camino.push(nV);
+	
+	list <VECINO> :: iterator it; //Iterador para recorrer la lista
+	for(it = vecinos.begin(); it != vecinos.end(); ++it){
+		int n = (it) -> nVertice;
+		aux.push(n);
+		//cout<<"n "<< n<<endl;
+	}
+	//aux.push(v);
+	
+	while(!(camino.size() == cantVertices)){
+		nV = aux.front();
+		aux.pop();
+		
+		camino.push(nV);
+	}
+	
+	return resultado;
+	
 }
 
 
