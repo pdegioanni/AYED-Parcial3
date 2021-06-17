@@ -12,7 +12,7 @@
 
 #define C 28
 #define F 12
-#define MAXNODOS 10
+#define MAXNODOS 20
 
 using namespace std;
 
@@ -177,8 +177,9 @@ int main(int argc, char** argv) {
 DATA cargarMatriz(){
 	DATA d;
 
-	//ifstream f("img.txt");
-	ifstream f("imgSinBarreras.txt");
+	ifstream f("img.txt");
+	//ifstream f("imgSinBarreras.txt");
+	//ifstream f("grande.txt");
 	string line;
 	
 	int i = 0;
@@ -385,7 +386,7 @@ CAMINO busquedaEnAmplitud(Vertice* v, int cantVertices){
 	resultado.costo = costo;
 	resultado.camino = camino;
 	
-	camino.push_front(nV);
+	camino.push_back(nV);
 	
 	for(int j = 0; j<MAXNODOS; j++){
 		if(aristas[nV-1][j] != 0){ //Si hay camino
@@ -393,11 +394,11 @@ CAMINO busquedaEnAmplitud(Vertice* v, int cantVertices){
 		}
 	}
 	
-	while((camino.size() < cantVertices) || !salir){ //Mientras no se cumpla el ciclo
-		ultimo = camino.front();
+	while((camino.size() <= cantVertices) || !salir){ //Mientras no se cumpla el ciclo
+		ultimo = camino.back();
 		nV = aux.front();
 		aux.pop();
-			
+		//cout<<"ultimo en camino "<<ultimo<<" nv "<< nV<<endl;
 		while((aristas[nV-1][ultimo -1] == 0 || contiene(camino, nV)) ){ //Mientras no haya camino, desencola
 			if(aux.empty()) {
 				salir = true;
@@ -405,6 +406,7 @@ CAMINO busquedaEnAmplitud(Vertice* v, int cantVertices){
 			}
 			nV = aux.front();
 			aux.pop();
+			//cout<<"Se saca de la cola "<< nV<<endl;
 		}
 		
 		if(!salir){
@@ -413,15 +415,20 @@ CAMINO busquedaEnAmplitud(Vertice* v, int cantVertices){
 			for(int j = 0; j<MAXNODOS; j++){
 				if(aristas[nV-1][j] != 0){ //Si hay camino
 					aux.push(j+1); //encola vecinos
+					//cout<<"nv "<< nV<<" agrega vecino "<< j+1<<endl;
 				}
 			}
 		}
 		else break;
 	}
-		int primerV = v -> getNumero();
+		int primerV = camino.front();
 		int ultimoV = camino.back();
 		
-	if(aristas[primerV-1][ultimoV-1] != 0){ //Se cierra el ciclo
+		printLista(camino);
+		//cout<<"primer "<<primerV<<endl;
+		//cout<<"iltimo "<<ultimoV<<endl;
+		
+	if(camino.size()== cantVertices && aristas[primerV-1][ultimoV-1] != 0){ //Se cierra el ciclo
 		
 		camino.push_back(primerV);
 		costo = costo + aristas[primerV-1][ultimoV-1];
