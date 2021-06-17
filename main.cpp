@@ -10,8 +10,8 @@
 #include <iterator>
 #include <fstream>
 
-#define C 28
-#define F 12
+#define C 100
+#define F 100
 #define MAXNODOS 15
 
 using namespace std;
@@ -129,10 +129,10 @@ int main(int argc, char** argv) {
 	
 	//1) Carga de datos desde el archivo
 	DATA d = cargarMatriz();
-	cout<< "Matriz de malezas: "<<endl;
-	d.m.print();
-	cout<<endl<< "Matriz de barreras: "<<endl;
-	d.b.print();
+	//cout<< "Matriz de malezas: "<<endl;
+	//d.m.print();
+	//cout<<endl<< "Matriz de barreras: "<<endl;
+	//d.b.print();
 	
 	//2)Filtrado de manchas significativas. Si la mancha es mayor al tamano del filtro quedan 1s consecutivos
 	d.m = filtrarMatriz(d.m, 3);
