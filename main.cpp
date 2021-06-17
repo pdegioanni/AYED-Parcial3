@@ -13,12 +13,13 @@
 
 #define C 28
 #define F 12
-#define FILTRO 3
+//#define FILTRO 3
+#define MAXNODOS 10
 
 using namespace std;
 
 
-
+double aristas[MAXNODOS][MAXNODOS];
 
 //CLASE MATRIZ DE BITSETS
 class Matriz { 
@@ -116,7 +117,7 @@ void Vertice :: printVecinos(){
 
 
 typedef struct{
-	queue<int> camino;
+	list<int> camino;
 	double costo; 
 } CAMINO;
 
@@ -131,6 +132,9 @@ void corroborarCamino();
 double calcularDistancia(Vertice* v1, Vertice* v2);
 CAMINO encontrarCircuito(queue<Vertice*> vertices);
 CAMINO busquedaEnAmplitud(Vertice* v, int cantVertices);
+void printAristas();
+void printLista(list<int> l);
+bool contiene(list<int> l, int n);
 
 
 //CLASE PRINCIPAL
@@ -166,6 +170,8 @@ int main(int argc, char** argv) {
 	cout<<endl<<"Vertices del grafo enlazados: "<<endl;
 	verticesEnlazados = enlazarVerticesAlcanzables(vertices, d.b);
 	cout<<"Cantidad total de vertices: "<<verticesEnlazados.size()<<endl;
+	cout<<"Aristas: "<<endl;
+	printAristas();
 	
 	//5) Explorar caminos hamiltonianos posibles y elegir el de menor costo 
 	CAMINO respuesta;
@@ -271,6 +277,17 @@ void printVertices(list <Vertice*>* l){
     }
 }
 
+void printAristas(){
+	for(int i= 0; i<MAXNODOS; i++){
+		cout<<endl;
+		for(int j = 0; j<MAXNODOS; j++){
+			cout<<aristas[i][j] << "\t";
+		}
+	}
+	cout<<endl;
+}
+
+
 queue<Vertice*> enlazarVerticesAlcanzables(list <Vertice*>* vertices, Matriz b){
 	queue<Vertice*> verticesEnlazados;
 	bool verticeEnlazable = true; //Se setea en false cuando hay una barrera de por medio
@@ -328,6 +345,9 @@ queue<Vertice*> enlazarVerticesAlcanzables(list <Vertice*>* vertices, Matriz b){
 				distancia = calcularDistancia(v1, v2);
 				nuevoVecino.dist = distancia;
 				
+				aristas[v1 -> getNumero() -1 ][v2 ->getNumero()-1] = distancia;
+				aristas[v2 -> getNumero()-1][v1 ->getNumero()-1] = distancia;
+				
 				//Enlaza a v2 con v1
 				nuevoVecino.nVertice = v2 -> getNumero();
 				v1 -> addVecino(nuevoVecino);
@@ -356,18 +376,24 @@ queue<Vertice*> enlazarVerticesAlcanzables(list <Vertice*>* vertices, Matriz b){
 }
 
 CAMINO encontrarCircuito(queue<Vertice*> vertices){
-	//cout<<"Cantidad total de vertices: "<<vertices.size()<<endl;
 	CAMINO resultado;
 	CAMINO aux;
 	int cantVertices = vertices.size();
 	double costo;
 	
 	while(!vertices.empty()){
+		//cout<<"Cantidad total de vertices: "<<vertices.size()<<endl;
 		Vertice* v = vertices.front();
 		vertices.pop();
 		aux = busquedaEnAmplitud(v, cantVertices);
 		
-		if(aux.costo < resultado.costo)	resultado = aux;
+		if(aux.costo != 0){
+			cout<<"Camino encontrado: ";
+			printLista(aux.camino);
+			cout<<endl<<"Costo: "<<  aux.costo<<endl;
+		
+			if(aux.costo < resultado.costo)	resultado = aux;	
+		}
 	}
 	
 	return resultado;
@@ -387,39 +413,92 @@ double calcularDistancia(Vertice* v1, Vertice* v2){
 }
 
 CAMINO busquedaEnAmplitud(Vertice* v, int cantVertices){
-	//queue<Vertice*> aux;
-	//queue<Vertice*> camino;
 	int nV = v -> getNumero();
-	queue<int> camino;
+	int ultimo;
+	
+	list<int> camino;
 	queue<int> aux;
-	double costo;
+	double costo = 0;
 	
 	CAMINO resultado;
-	resultado.camino = camino;
 	resultado.costo = costo;
+	resultado.camino = camino;
 	
-	list<VECINO> vecinos = v -> getVecinos();
+	camino.push_front(nV);
 	
-	camino.push(nV);
 	
-	list <VECINO> :: iterator it; //Iterador para recorrer la lista
-	for(it = vecinos.begin(); it != vecinos.end(); ++it){
+	//list <VECINO> :: iterator it; //Iterador para recorrer la lista
+	/*for(it = vecinos.begin(); it != vecinos.end(); ++it){
 		int n = (it) -> nVertice;
 		aux.push(n);
 		//cout<<"n "<< n<<endl;
-	}
-	//aux.push(v);
+	}*/
 	
-	while(!(camino.size() == cantVertices)){
+	//aux.push(v);
+	for(int j = 0; j<MAXNODOS; j++){
+		if(aristas[nV-1][j] != 0){ //Si hay camino
+			aux.push(j+1);
+		}
+	}
+	
+	while(!(camino.size() == cantVertices)){ //Mientras no se cumpla el ciclo
+		ultimo = camino.front();
 		nV = aux.front();
 		aux.pop();
 		
-		camino.push(nV);
+		//cout<<"Camino ";
+		//printLista(camino);
+		
+		while(aristas[nV-1][ultimo -1] == 0 || contiene(camino, nV)){ //Mientras no haya camino, desencola
+			//cout<< aristas[nV-1][ultimo -1]<<endl;
+			aux.pop();
+			nV = aux.front();
+		}
+		
+		camino.push_front(nV);
+		costo = costo + aristas[nV-1][ultimo -1];
+		
+		for(int j = 0; j<MAXNODOS; j++){
+			if(aristas[nV-1][j] != 0){ //Si hay camino
+				aux.push(j+1); //encola vecinos
+			}
+		}
 	}
 	
+	if(aristas[nV-1][v -> getNumero()-1] != 0){ //Se cierra el ciclo
+		
+		camino.push_front(v -> getNumero());
+		costo = costo + aristas[nV-1][v -> getNumero()-1];
+		cout<<"Costo en bea "<< costo<<endl;
+		cout<<" Camino encontrado en bea: ";
+		printLista(camino);
+		
+		resultado.camino = camino;
+	resultado.costo = costo;
+	}
+		
 	return resultado;
-	
 }
 
+bool contiene(list<int> l, int n){
+	//bool esta = false;
+	list <int> :: iterator it; //Iterador para recorrer la lista
+	
+	for(it = l.begin(); it != l.end(); ++it){
+		if((*it) == n) return true;
+	}
+	
+	return false;
+}
 
+void printLista(list<int> l){
+	//bool esta = false;
+	list <int> :: iterator it; //Iterador para recorrer la lista
+	
+	for(it = l.begin(); it != l.end(); ++it){
+		cout<<(*it)<<" ";
+	}
+	
+	cout<<endl;
+}
 
